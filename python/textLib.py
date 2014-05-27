@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from serialDriver import serialDriver
+from text import text
 
 class textLib(object):
     def __new__(cls, sd):

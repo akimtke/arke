@@ -17,50 +17,38 @@ class serialDriver(object):
             stat = False
             time.sleep(15)
             to = 10
+            self.sIn = False
+            self.sRdy = False
+            self.net = False
+            self.cRdy = False
+            self.mRdy = False
+
             while (to > 0) and not stat:
                 stat = self.readState()
+                to = to - 1
                 time.sleep(1)
 
             if not stat:
                 self.err = True
                 self.errMessage = "Something went wrong when initializing the GSM module"
             else:
-                self.ser.write("AT+SBAND=8\r\n")
+                time.sleep(2)
+                self.send("AT+SBAND=8\r\n")
+                if not self.checkSuccess():
+                    self.err = True
+                    self.errMessage = "Failed to set the frequency of the module"
         except Exception as e:
             self.err = True
             self.errMessage = str(e)
 
-    def close(self)):
+    def close(self):
         self.ser.close()
-
-    def sendText(self, text):
-        if ser.isOpen():
-            ser.write('AT+CMGF=1\r\n')
-            to = 5
-            while(to > 0):
-                to = to - 1
-                res = ser.readline()
-                if "OK" in res:
-                    break
-            if to > 0:
-                return False
-
-            ser.write('AT+CMSG="' + text.number + '"\r\n' + text.message + '\x1A\r\n')
-            to = 5
-            while(to > 0):
-                to = to - 1
-                res = ser.readline()
-                if "OK" in res:
-                    break
-            if to > 0:
-                return False
-
-            return True
 
     # This function should not execute if the error condition is set.
     def send(self, command):
         if not self.err:
             if self.ser.isOpen():
+                print "Sending: " + command
                 self.ser.write(command)
                 return True
             else:
@@ -98,9 +86,11 @@ class serialDriver(object):
             if self.ser.isOpen():
                 res = self.ser.read(self.ser.inWaiting())
 
+                print res
+
                 if "OK" in res:
                     return True
-                else
+                else:
                     return False
             else:
                 self.err = True
@@ -131,12 +121,7 @@ class serialDriver(object):
         if self.ser.isClosed():
             self.open()
 
-    def readState():
-        sIn = False
-        sRdy = False
-        net = False
-        cRdy = False
-        mRdy = False
+    def readState(self):
 
         res = self.ser.read(self.ser.inWaiting())
 
@@ -147,14 +132,14 @@ class serialDriver(object):
 
         for code in results:
             if code == '+SIND: 1':
-                sIn = True
+                self.sIn = True
             elif code == '+SIND: 10,"SM",1,"FD",1,"LD",1,"MC",1,"RC",1,"ME",1':
-                sRdy = True
+                self.sRdy = True
             elif code == '+SIND: 11':
-                net = True
+                self.net = True
             elif code == '+SIND: 3':
-                cRdy = True
+                self.cRdy = True
             elif code == '+SIND: 4':
-                mRdy = True
+                self.mRdy = True
 
-        return (sIn and sRdy and net and cRdy and mRdy)
+        return (self.sIn and self.sRdy and self.net and self.cRdy and self.mRdy)
