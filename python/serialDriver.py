@@ -13,30 +13,6 @@ class serialDriver(object):
     def open(self):
         try:
             self.ser = serial.Serial(self.port, self.baud, timeout=1)
-
-            stat = False
-            time.sleep(15)
-            to = 10
-            self.sIn = False
-            self.sRdy = False
-            self.net = False
-            self.cRdy = False
-            self.mRdy = False
-
-            while (to > 0) and not stat:
-                stat = self.readState()
-                to = to - 1
-                time.sleep(1)
-
-            if not stat:
-                self.err = True
-                self.errMessage = "Something went wrong when initializing the GSM module"
-            else:
-                time.sleep(2)
-                self.send("AT+SBAND=8\r\n")
-                if not self.checkSuccess():
-                    self.err = True
-                    self.errMessage = "Failed to set the frequency of the module"
         except Exception as e:
             self.err = True
             self.errMessage = str(e)
@@ -63,6 +39,8 @@ class serialDriver(object):
         if not self.err:
             results = ""
             if self.ser.isOpen():
+                while self.ser.inWaiting() == 0:
+                    time.sleep(1)
                 res = self.ser.read(self.ser.inWaiting())
                 res = res.strip()
                 res = res.replace("\r\n\r\n", "\r\n")
@@ -84,9 +62,11 @@ class serialDriver(object):
     def checkSuccess(self):
         if not self.err:
             if self.ser.isOpen():
+                while self.ser.inWaiting() == 0:
+                    time.sleep(1)
                 res = self.ser.read(self.ser.inWaiting())
 
-                print res
+                print repr(res)
 
                 if "OK" in res:
                     return True
@@ -102,6 +82,8 @@ class serialDriver(object):
     def checkForPrompt(self):
         if not self.err:
             if self.ser.isOpen():
+                while self.ser.inWaiting() == 0:
+                    time.sleep(1)
                 res = self.ser.read(self.ser.inWaiting())
                 res = res.strip()
                 if ">" in res:
@@ -122,24 +104,18 @@ class serialDriver(object):
             self.open()
 
     def readState(self):
+        to = 10
+        ret = False
+        running = ""
 
-        res = self.ser.read(self.ser.inWaiting())
+        while to < 10 and not ret:
+            if self.ser.inWaiting() > 0:
+                res = self.ser.read(self.ser.inWaiting())
+                running = running + res
+                if "+SIND: 4" in res:
+                    ret = True
 
-        res = res.strip()
-        res = res.replace("\r\n\r\n", "\r\n")
-
-        results = res.split("\r\n")
-
-        for code in results:
-            if code == '+SIND: 1':
-                self.sIn = True
-            elif code == '+SIND: 10,"SM",1,"FD",1,"LD",1,"MC",1,"RC",1,"ME",1':
-                self.sRdy = True
-            elif code == '+SIND: 11':
-                self.net = True
-            elif code == '+SIND: 3':
-                self.cRdy = True
-            elif code == '+SIND: 4':
-                self.mRdy = True
-
-        return (self.sIn and self.sRdy and self.net and self.cRdy and self.mRdy)
+        if not ret:
+            self.err = True
+            self.errMessage = "DUMP: " + running
+        return ret
