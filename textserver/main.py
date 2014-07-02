@@ -4,6 +4,8 @@ import pyjsonrpc
 from gsmmodem.modem import GsmModem, SentSms, Sms
 from gsmmodem.exceptions import TimeoutException, PinRequiredError, IncorrectPinError
 
+# Method that handles the calls to the GSM modem.
+# The argument key is used to prevent stranger danger
 def text(number, message, key):
     if key.strip() == '9703BB8D5A':
         print "Creating modem instance"
@@ -34,6 +36,7 @@ def text(number, message, key):
     else:
         return 'Key is not correct'
 
+# Not working completely. Seems to only retrieve one text. Need to figure out how to get this working.
 def getUnreadText(key):
     if key.strip() == '9703BB8D5A':
         modem = GsmModem('/dev/ttyUSB0', 9600)
@@ -60,6 +63,7 @@ def getUnreadText(key):
     else:
         return "Incorrect key"
 
+# Again, not really working.
 def getAllText(key):
     if key.strip() == '9703BB8D5A':
         modem = GsmModem('/dev/ttyUSB0', 9600)
@@ -86,6 +90,7 @@ def getAllText(key):
     else:
         return "Incorrect key"
 
+# This class exposes the methods in this file to a JSON RPC protocol.
 class RequestHandler(pyjsonrpc.HttpRequestHandler):
     methods = {
             "text": text,
@@ -93,6 +98,8 @@ class RequestHandler(pyjsonrpc.HttpRequestHandler):
             "getAllText": getAllText
             }
 
+# Start the JSON RPC server. Bind to your machine's IP address. Binding to localhost only allows for local
+# traffic to reach this code which may be beneficial.
 http_server = pyjsonrpc.ThreadingHttpServer(
         server_address = ('192.168.0.20', 8081),
         RequestHandlerClass = RequestHandler
